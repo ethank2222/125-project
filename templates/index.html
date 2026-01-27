@@ -1,0 +1,183 @@
+<html>
+    <head>
+        <title>Exercise Search</title>
+        <script src="https://kit.fontawesome.com/28f19a82fa.js" crossorigin="anonymous"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    </head>
+    <body>
+        <div id="logo">
+            <h1>E3 Exercise Search</h1>
+        </div>
+        <div id="wrapper">
+            <div id="textbox">
+                <textarea id="text" placeholder="Search Anything..." spellcheck="false"></textarea>
+                <i id="button" class="fa fa-send" style="visibility:hidden; transition: .2s; align-self: center; cursor: pointer; width: 60px; font-size: 24px;"></i>
+            </div>
+        </div>
+    </body>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+        *{
+            font-family: "Lato", sans-serif;
+            font-weight: bold;
+            font-style: normal;
+        }
+        h1{
+            text-align: center;
+        }
+        #textbox{
+            width: inherit;
+            background-color: #dcdcdc;
+            border-radius: 20px;
+            display: flex;
+            width: 80%;
+            margin: auto;
+            justify-self:center;
+        }
+        textarea {
+            outline:0px none transparent;
+            border: none;
+            resize: none;
+            font-size: 18px;
+            line-height: 1;
+            overflow-y: scroll;
+            width: calc(100% - 60px);
+            text-align: left;
+            
+            background-color: #dcdcdc;
+            border-radius: 20px;
+            height: 40px;
+            padding: 10px 20px;   
+        }
+        #results {
+            margin: 25px auto 0px;
+            width: 80%;
+        }
+        #results > div{
+            margin: 40px auto 0px;
+            width: 80%;
+            background-color: #eee;
+            padding: 18px 40px;
+            border-radius: 5px;
+        }
+        #results > div > div{
+            font-size: .8rem;
+            color: #888;
+        }
+        a{
+            color: #003087;
+            transition: .2s;
+            font-size: 1.4rem;
+            text-decoration: none;
+        }
+        a:hover{
+            color: #4B9CD3
+        }
+        p{
+            margin: 10px 0px 0px;
+            font-size: 1.1rem;
+            max-height: 2.8em;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            line-height: 1.35;
+            margin-bottom: 8px;
+        }
+        #elapsed-time{
+            margin: 0px auto;
+            text-align: center;
+            font-size: 16px;
+        }
+        body{
+            margin-bottom: 30px;
+        }
+        .nowrap {
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
+
+    </style>
+    <script>
+        let computing = 0;
+        document.getElementById("button").onclick = function(){send()};
+        document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && document.activeElement === document.getElementById("text")){
+            event.preventDefault();
+            send();
+        }
+        });
+        async function send(){
+            if (computing == 0 && document.getElementById("text").value != ""){
+                computing = 1;
+
+
+                var question = document.getElementById("text").value;
+                document.getElementById("text").value = "";
+                let responseJSON;
+                // Get Response
+                responseJSON = await new Promise((resolve, reject) => {
+                    $.ajax({
+                        url: '/askQuestion',
+                        contentType: 'application/json',
+                        type: 'POST',
+                        data: JSON.stringify({
+                            "question": question
+                        }),
+                        success: function(data) {
+                            resolve({
+                                message: data.message,
+                                time: data.time,
+                                numHits: data.numHits
+                        });
+                        },
+                        error: function(err) {
+                            reject(err);
+                        }
+                    });
+                });
+                const message = responseJSON.message
+                const time = responseJSON.time;
+
+                console.log(responseJSON);
+                if (document.getElementById("results") != undefined){
+                    document.getElementById("results").remove();
+                }
+                var resultsWrapper = document.createElement("div");
+                resultsWrapper.id = "results";
+
+                var responseTime = responseJSON.time;
+                if (responseTime == undefined){
+                    responseTime = "unknown"
+                }
+                
+                var numHits = responseJSON.numHits
+                var elapsed = document.createElement("h2");
+                elapsed.innerText = "Showing " + Math.min(5, numHits) + " out of " + numHits + " results found in " + responseTime.toFixed(3) + "ms.";
+                elapsed.id = "elapsed-time";
+                resultsWrapper.appendChild(elapsed);
+
+
+                for (var i = 0; i < Object.keys(responseJSON.message).length; i++){
+                    var searchResult = document.createElement("div");
+                    searchResult.className = "result";
+                    searchResult.innerHTML = `
+                        <a href="` + Object.values(responseJSON.message)[i]['url'] + `">` + Object.values(responseJSON.message)[i]['title'] + `</a>
+                        <div class="nowrap">` + Object.values(responseJSON.message)[i]['url'] + `</div>
+                        <p maxlength = "200">` + Object.values(responseJSON.message)[i]['desc'] + `</p>
+                    `
+                    if (Object.values(responseJSON.message)[i]['url'] != "#"){
+                        resultsWrapper.appendChild(searchResult);
+                    }
+                }
+                if (document.getElementsByClassName("result") == undefined){
+                    elapsed.innerText = "No results Found for that query."
+                }
+
+                document.getElementById('wrapper').appendChild(resultsWrapper);
+                
+                computing = 0;
+            }
+        }
+    </script>
+</html>
