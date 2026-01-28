@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .info-card {
+            background: white;
+            padding: 20px;
+        }
+        .info-card h3 {
+            color: #667eea;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .logout-btn {
+            background: #eee;
+            color: #333;
+        }
+        .logout-btn:hover {
+            background: #ddd;
+        }
+        #textbox {
+            display: flex;
+            background: #f5f5f5;
+            padding: 5px;
+        }
+        textarea {
+            border: none;
+            background: #f5f5f5;
+            padding: 10px;
+            width: 100%;
+            font-size: 16px;
+        }
+        #button {
+            visibility: hidden;
+            cursor: pointer;
+            padding: 10px;
+            color: #667eea;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        #results > div {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 3px solid #667eea;
+        }
+        #results a {
+            color: #003087;
+            font-size: 18px;
+            text-decoration: none;
+        }
+        #results a:hover {
+            color: #4B9CD3;
+        }
+        #results p {
+            margin: 10px 0;
+            color: #666;
+        }
+        #elapsed-time {
+            text-align: center;
+            color: #666;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>E3 Exercise Search</h1>
+            <div>
+                <span>Welcome, {{ user.name }}!</span>
+                <button class="logout-btn" onclick="window.location.href='/logout'">Logout</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Dashboard</h2>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Fitness Goal</h3>
+                <p>{{ user.intent or 'Not specified' }}</p>
+            </div>
+            <div class="info-card">
+                <h3>Weight</h3>
+                <p>{{ user.weight or 'Not specified' }} lbs</p>
+            </div>
+            <div class="info-card">
+                <h3>Height</h3>
+                <p>{{ user.height or 'Not specified' }} inches</p>
+            </div>
+            <div class="info-card">
+                <h3>Age</h3>
+                <p>{{ user.age or 'Not specified' }}</p>
+            </div>
+        </div>
+        
+        <div class="card" style="text-align: center;">
+            <a href="/preferences"><button>Change Preferences</button></a>
+        </div>
+        
+        <div class="card">
+            <h2>Search Exercises</h2>
+            <div id="textbox">
+                <textarea id="text" placeholder="Search..."></textarea>
+                <span id="button">→</span>
+            </div>
+            <div id="results"></div>
+        </div>
+    </div>
+    
+    <script>
+        let busy = 0;
+        
+        document.getElementById("button").onclick = send;
+        document.getElementById("text").addEventListener('input', function() {
+            if (this.value.trim()) {
+                document.getElementById("button").style.visibility = "visible";
+            } else {
+                document.getElementById("button").style.visibility = "hidden";
+            }
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && document.activeElement === document.getElementById("text")) {
+                e.preventDefault();
+                send();
+            }
+        });
+        
+        async function send() {
+            if (busy || !document.getElementById("text").value) return;
+            busy = 1;
+            
+            const q = document.getElementById("text").value;
+            document.getElementById("text").value = "";
+            document.getElementById("button").style.visibility = "hidden";
+            
+            try {
+                const res = await fetch('/askQuestion', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({question: q})
+                }).then(r => r.json());
+                
+                document.getElementById("results").innerHTML = "";
+                const timeEl = document.createElement("h2");
+                timeEl.id = "elapsed-time";
+                timeEl.textContent = `Found ${res.numHits} results in ${res.time.toFixed(3)}ms`;
+                document.getElementById("results").appendChild(timeEl);
+                
+                for (let i = 0; i < Object.keys(res.message).length; i++) {
+                    const item = Object.values(res.message)[i];
+                    if (item.url !== "#") {
+                        const div = document.createElement("div");
+                        div.className = "result";
+                        div.innerHTML = `<a href="${item.url}">${item.title}</a><div style="font-size: 12px; color: #888;">${item.url}</div><p>${item.desc}</p>`;
+                        document.getElementById("results").appendChild(div);
+                    }
+                }
+                
+                if (document.getElementsByClassName("result").length === 0) {
+                    timeEl.textContent = "No results found";
+                }
+            } catch (err) {
+                alert('Error');
+            }
+            
+            busy = 0;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Create Account</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .progress {
+            width: 100%;
+            height: 4px;
+            background: #eee;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #667eea;
+            width: 0%;
+        }
+        .step-info {
+            text-align: center;
+            color: #999;
+            margin-bottom: 20px;
+        }
+        .card {
+            display: none;
+        }
+        .card.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 80px;
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .error.show {
+            display: block;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 1px solid #667eea;
+        }
+        .btn-secondary:hover {
+            background: #f5f5f5;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Create Account</h1>
+        <div class="progress">
+            <div class="progress-bar" id="progress"></div>
+        </div>
+        <div class="step-info">
+            <span id="step">1</span> of 7
+        </div>
+        <div id="error" class="error"></div>
+        
+        <form id="signup-form">
+            <div class="card active" data-step="1">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="btn-group">
+                    <button type="button" onclick="nextStep()">Next</button>
+                </div>
+            </div>
+            
+            <div class="card" data-step="2">
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" onclick="nextStep()">Next</button>
+                </div>
+            </div>
+            
+            <div class="card" data-step="3">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" onclick="nextStep()">Next</button>
+                </div>
+            </div>
+            
+            <div class="card" data-step="4">
+                <div class="form-group">
+                    <label>Fitness Goal</label>
+                    <select id="intent" required>
+                        <option value="">Select...</option>
+                        <option value="lose weight">Lose Weight</option>
+                        <option value="gain muscle">Gain Muscle</option>
+                        <option value="maintain fitness">Maintain Fitness</option>
+                        <option value="improve endurance">Improve Endurance</option>
+                        <option value="rehabilitation">Rehabilitation</option>
+                        <option value="general health">General Health</option>
+                    </select>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" onclick="nextStep()">Next</button>
+                </div>
+            </div>
+            
+            <div class="card" data-step="5">
+                <div class="form-group">
+                    <label>Weight (lbs)</label>
+                    <input type="number" id="weight" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Height (inches)</label>
+                    <input type="number" id="height" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Age</label>
+                    <input type="number" id="age" min="1" max="120">
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" onclick="nextStep()">Next</button>
+                </div>
+            </div>
+            
+            <div class="card" data-step="6">
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="gender">
+                        <option value="">Prefer not to say</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" onclick="nextStep()">Next</button>
+                </div>
+            </div>
+            
+            <div class="card" data-step="7">
+                <div class="form-group">
+                    <label>Previous Injuries (optional)</label>
+                    <textarea id="previous_injuries"></textarea>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="submit">Create Account</button>
+                </div>
+            </div>
+        </form>
+        
+        <div class="back-link">
+            <a href="/">Already have an account? Sign in</a>
+        </div>
+    </div>
+    
+    <script>
+        let step = 1;
+        
+        function updateProgress() {
+            document.getElementById('progress').style.width = (step / 7 * 100) + '%';
+            document.getElementById('step').textContent = step;
+        }
+        
+        function showStep(n) {
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.card[data-step="${n}"]`).classList.add('active');
+            updateProgress();
+        }
+        
+        function validate() {
+            const card = document.querySelector(`.card[data-step="${step}"]`);
+            const required = card.querySelectorAll('[required]');
+            for (let input of required) {
+                if (!input.value.trim()) {
+                    showError('Please fill in all required fields');
+                    return false;
+                }
+            }
+            if (step === 1 && document.getElementById('username').value.length < 3) {
+                showError('Username must be at least 3 characters');
+                return false;
+            }
+            if (step === 2 && document.getElementById('password').value.length < 6) {
+                showError('Password must be at least 6 characters');
+                return false;
+            }
+            return true;
+        }
+        
+        function nextStep() {
+            if (!validate()) return;
+            if (step < 7) {
+                step++;
+                showStep(step);
+                hideError();
+            }
+        }
+        
+        function prevStep() {
+            if (step > 1) {
+                step--;
+                showStep(step);
+                hideError();
+            }
+        }
+        
+        function showError(msg) {
+            const err = document.getElementById('error');
+            err.textContent = msg;
+            err.classList.add('show');
+        }
+        
+        function hideError() {
+            document.getElementById('error').classList.remove('show');
+        }
+        
+        document.getElementById('signup-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!validate()) return;
+            
+            const data = {
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('password').value,
+                name: document.getElementById('name').value.trim(),
+                intent: document.getElementById('intent').value,
+                weight: document.getElementById('weight').value ? parseFloat(document.getElementById('weight').value) : null,
+                height: document.getElementById('height').value ? parseFloat(document.getElementById('height').value) : null,
+                age: document.getElementById('age').value ? parseInt(document.getElementById('age').value) : null,
+                gender: document.getElementById('gender').value,
+                previous_injuries: document.getElementById('previous_injuries').value.trim()
+            };
+            
+            try {
+                const res = await fetch('/create_account', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    window.location.href = '/dashboard';
+                } else {
+                    showError(result.error || 'Could not create account');
+                }
+            } catch (err) {
+                showError('Error');
+            }
+        });
+        
+        updateProgress();
+    </script>
+</body>
+</html>
