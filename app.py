@@ -6,7 +6,15 @@ import os
 app = Flask(__name__)
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('login.html')
+
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
+
+@app.route('/preferences')
+def preferences():
+    return render_template('preferences.html')
 
 
 @app.route('/askQuestion', methods=['POST'])

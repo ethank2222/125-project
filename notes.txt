@@ -1,0 +1,8 @@
+Username (or skip if no account)
+Password (or skip if no account)
+
+Create Username and Password
+Name
+user intent (lose weight, gain muscle, etc.)
+current weight, height, age, gender
+Previous injuries
