@@ -15,7 +15,7 @@ TEST_USER = {
 }
 
 def main():
-    search.initScoring(TEST_USER)
+    # search.initScoring(TEST_USER)
     exercises = search.topN(10)
     for e in exercises:
         print(e)

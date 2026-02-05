@@ -35,7 +35,7 @@ SET score = CASE category
     WHEN 'strength' THEN score + 10
     WHEN 'powerlifting' THEN score + 8
     WHEN 'strongman' THEN score + 6
-    WHEN 'pylometrics' THEN score + 6
+    WHEN 'plyometrics' THEN score + 6
     WHEN 'olympic weightlifting' THEN score + 4
     WHEN 'stretching' THEN score + 0
     WHEN 'cardio' THEN score - 6
@@ -48,7 +48,7 @@ SET score = CASE category
     WHEN 'strength' THEN score + 4
     WHEN 'powerlifting' THEN score - 2
     WHEN 'strongman' THEN score - 2
-    WHEN 'pylometrics' THEN score + 8
+    WHEN 'plyometrics' THEN score + 8
     WHEN 'olympic weightlifting' THEN score - 2
     WHEN 'stretching' THEN score + 0
     WHEN 'cardio' THEN score + 10
@@ -60,7 +60,7 @@ END
 
 def topN(n: int):
     selectN = f"""
-    SELECT name
+    SELECT name, score
     FROM exercises
     ORDER BY score DESC
     LIMIT {n};
