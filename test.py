@@ -16,9 +16,11 @@ TEST_USER = {
 
 def main():
     # search.initScoring(TEST_USER)
-    exercises = search.topN(10)
-    for e in exercises:
-        print(e)
+    exercisesPush = search.buildDay(day='upper')
+    print(exercisesPush)
+    # exercises = search.topN(10)
+    # for e in exercises:
+    #     print(e)
 
 
 if __name__ == "__main__":
