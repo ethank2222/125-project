@@ -151,3 +151,34 @@ def topN(n: int):
 """
     cursor.execute(selectN)
     return cursor.fetchall()
+
+
+def createUserSplitsTable():
+    e01_create_usersplits = f"""
+    CREATE TABLE IF NOT EXISTS userSplits (
+        userid TEXT PRIMARY KEY,
+        musclegroup TEXT,
+        exercises TEXT
+        );
+"""
+    print(DB_PATH)
+    import os
+    print(os.path.abspath('.'))
+        # create a database connection
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            # create a cursor
+            cursor = conn.cursor()
+
+            # execute statements
+            cursor.execute(e01_create_usersplits)
+
+            # commit the changes
+            conn.commit()
+    
+            print("Tables created successfully.")
+    except sqlite3.OperationalError as e:
+        print("Failed to create tables:", e)
+
+
+

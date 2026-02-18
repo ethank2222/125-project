@@ -22,6 +22,9 @@ def main():
     # for e in exercises:
     #     print(e)
 
+    search.createUserSplitsTable()
+    print("created table")
+
 
 if __name__ == "__main__":
     main()
