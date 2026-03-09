@@ -2,8 +2,10 @@ import sqlite3
 import json
 
 DB_PATH = "./db/FIT.db"
-conn = sqlite3.connect(DB_PATH)
-cursor = conn.cursor()
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    return conn
 
 # HAVE TO UPDATE DB
 # front and middle shoulder for push
@@ -16,6 +18,9 @@ ABS = ['abdominals', 'adductors', 'abductors']
 LEGS = ['hamstrings', 'quadriceps', 'calves', 'glutes']
 
 def searchDocuments(query):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Placeholder implementation
     results = {
         0: {
             'url': '#',
@@ -28,6 +33,7 @@ def searchDocuments(query):
             'desc': f'Your query: {query}'
         }
     }
+    conn.close()
     return (results, 2)
 
 

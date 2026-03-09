@@ -176,5 +176,21 @@ def get_plan():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/generate_plan', methods=['POST'])
+def generate_plan():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Need to login'}), 401
+    
+    user = database.get_user(session['user_id'])
+    if not user or not user.get('avail_days') or not user.get('avail_mins'):
+        return jsonify({'error': 'Please set your available days and minutes in preferences'}), 400
+    
+    try:
+        import genPlan
+        plan = genPlan.buildPlan(user)
+        return jsonify({'success': True, 'plan': plan})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)

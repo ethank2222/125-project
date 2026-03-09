@@ -2,8 +2,10 @@ import sqlite3
 import json
 
 DB_PATH = "./db/FIT.db"
-conn = sqlite3.connect(DB_PATH)
-cursor = conn.cursor()
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    return conn
 
 # TODO DB updates:
 # 1. bin shoulders into shoulders interior, shoulders exterior (pull and push)
@@ -67,6 +69,8 @@ def daysplitter(days):
 # 1. Error handling: muscle groups that are not in compounds
 # 2. Isolation exercise round
 def buildDay(day, time):
+    conn = get_db_connection()
+    cursor = conn.cursor()
     exercises  = ['']
     musclesAll  = getMuscleGroups(day)
     musclesLeft = musclesAll.copy()
@@ -82,7 +86,7 @@ def buildDay(day, time):
         FROM exercises
         WHERE (
             primaryMuscles in ({musclePQL})
-            AND EXISTS (
+            OR EXISTS (
                 SELECT 1
                 FROM json_each(exercises.secondaryMuscles)
                 WHERE json_each.value in ({musclePQA})
@@ -97,18 +101,27 @@ def buildDay(day, time):
 
         cursor.execute(selectQ, queryFill)
         res = cursor.fetchone()
-
+        
+        if res is None:
+            break  # No more exercises found
+        
         time -= 15
         exercises.append(res[0])
-        musclesLeft.remove(res[1])
+        
+        # Remove primary muscle if it's in the list
+        primary = res[1]
+        if primary in musclesLeft:
+            musclesLeft.remove(primary)
+        
+        # Remove secondary muscles if they're in the list
         secondaryMuscles = json.loads(res[2])
-
         for e in secondaryMuscles:
             if e in musclesLeft:
                 musclesLeft.remove(e)
         # print(f"Remaining {musclesLeft}")
     # Second iteration, focus on isolations
 
+    conn.close()
     return exercises[1:]
 
 
@@ -146,6 +159,8 @@ def dayExist(day)-> bool:
 
 
 def buildPlan(user):
+    conn = get_db_connection()
+    cursor = conn.cursor()
     fullPlan = {}
     splitList = daysplitter(user['avail_days'])
     dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -168,4 +183,5 @@ def buildPlan(user):
             dayPlan = json.loads(res[0])
         fullPlan[dayName] = dayPlan
     
+    conn.close()
     return fullPlan
