@@ -77,7 +77,7 @@ def buildDay(day, time):
 
     # First iteration
     # print(f"INITIAL Muscles: {musclesLeft}")
-    while time > 0 and musclesLeft:
+    while time > 15 and musclesLeft:
         musclePQL  = ", ".join(["?"] * len(musclesLeft))
         musclePQA  = ", ".join(["?"] * len(musclesAll))
         skipIdPQ   = ", ".join(["?"] * len(exercises))
@@ -120,6 +120,41 @@ def buildDay(day, time):
                 musclesLeft.remove(e)
         # print(f"Remaining {musclesLeft}")
     # Second iteration, focus on isolations
+    i_curr = 0
+    tail = len(musclesAll)
+    bad_queries = 0
+    while time > 9:
+        musclePQA  = ", ".join(["?"] * len(musclesAll))
+        skipIdPQ   = ", ".join(["?"] * len(exercises))
+        selectQ    = f"""
+        SELECT id, primaryMuscles, secondaryMuscles
+        FROM exercises
+        WHERE primaryMuscles = ?
+        AND mechanic = 'isolation'
+        AND ID NOT IN ({skipIdPQ})
+        ORDER BY score DESC
+        LIMIT 1;
+        """
+        queryFill = (musclesAll[i_curr], *musclesAll, *exercises)
+
+        cursor.execute(selectQ, queryFill)
+        res = cursor.fetchone()
+        
+        if i_curr == tail:
+            i_curr = 0
+        else:
+            i_curr += 1
+        
+        if res is None:
+            # isolation of that exercise doesn't exist
+            bad_queries += 1
+            if bad_queries == tail:
+                # hacky way of checking that we completely depleted all viable exercises
+                break
+
+        else:
+            time -= 10
+            exercises.append(res[0])
 
     conn.close()
     return exercises[1:]
