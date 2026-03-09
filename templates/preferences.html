@@ -5,28 +5,33 @@
     <title>Preferences</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: 0;
             padding: 20px;
+            min-height: 100vh;
         }
         .container {
             max-width: 600px;
             margin: 0 auto;
         }
         .header {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             padding: 20px;
             margin-bottom: 20px;
-            border-radius: 8px;
+            border-radius: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
         .card {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             padding: 30px;
-            border-radius: 8px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
         .form-group {
             margin-bottom: 20px;
@@ -140,8 +145,13 @@
                 </div>
                 
                 <div class="form-group">
-                    <label>Previous Injuries</label>
-                    <textarea id="previous_injuries">{{ user.previous_injuries or '' }}</textarea>
+                    <label>Available Days per Week</label>
+                    <input type="number" id="avail_days" min="1" max="7" value="{{ user.avail_days or '' }}">
+                </div>
+                
+                <div class="form-group">
+                    <label>Available Minutes per Session</label>
+                    <input type="number" id="avail_mins" min="10" max="180" value="{{ user.avail_mins or '' }}">
                 </div>
                 
                 <div class="btn-group">
@@ -170,7 +180,9 @@
                 height: document.getElementById('height').value ? parseFloat(document.getElementById('height').value) : null,
                 age: document.getElementById('age').value ? parseInt(document.getElementById('age').value) : null,
                 gender: document.getElementById('gender').value,
-                previous_injuries: document.getElementById('previous_injuries').value.trim()
+                previous_injuries: document.getElementById('previous_injuries').value.trim(),
+                avail_days: document.getElementById('avail_days').value ? parseInt(document.getElementById('avail_days').value) : null,
+                avail_mins: document.getElementById('avail_mins').value ? parseInt(document.getElementById('avail_mins').value) : null
             };
             
             try {

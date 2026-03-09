@@ -2,6 +2,7 @@ import search
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 import time
 import os
+import json
 import database
 
 app = Flask(__name__)
@@ -59,7 +60,9 @@ def create_account():
             'height': data.get('height'),
             'age': data.get('age'),
             'gender': data.get('gender'),
-            'previous_injuries': data.get('previous_injuries')
+            'previous_injuries': data.get('previous_injuries'),
+            'avail_days': data.get('avail_days'),
+            'avail_mins': data.get('avail_mins')
         }
         
         user_id = database.create_user(username, password, name, prefs)
@@ -101,7 +104,9 @@ def update_preferences():
         'height': data.get('height'),
         'age': data.get('age'),
         'gender': data.get('gender'),
-        'previous_injuries': data.get('previous_injuries')
+        'previous_injuries': data.get('previous_injuries'),
+        'avail_days': data.get('avail_days'),
+        'avail_mins': data.get('avail_mins')
     }
     
     database.update_preferences(session['user_id'], prefs)
@@ -112,25 +117,62 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-@app.route('/askQuestion', methods=['POST'])
-def askQuestion():
+@app.route('/get_exercises')
+def get_exercises():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Need to login'}), 401
+    
+    exercise_ids = request.args.get('ids')
+    if not exercise_ids:
+        return jsonify({'error': 'Need exercise IDs'}), 400
+    
+    try:
+        import genPlan
+        ids = [int(id.strip()) for id in exercise_ids.split(',') if id.strip()]
+        if not ids:
+            return jsonify({'exercises': {}})
+        
+        placeholders = ', '.join(['?'] * len(ids))
+        query = f"SELECT id, name FROM exercises WHERE id IN ({placeholders})"
+        genPlan.cursor.execute(query, ids)
+        results = genPlan.cursor.fetchall()
+        
+        exercises = {row[0]: row[1] for row in results}
+        return jsonify({'exercises': exercises})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_plan')
+def get_plan():
     if 'user_id' not in session:
         return jsonify({'error': 'Need to login'}), 401
     
     try:
-        start = time.perf_counter()
-
-        data = request.get_json()
-        if not data or 'question' not in data:
-            return jsonify({'error': 'Need a question'}), 400
+        import genPlan
+        conn = genPlan.conn
+        cursor = genPlan.cursor
+        cursor.execute("SELECT day, exercises FROM userSplits WHERE userid = ?;", (str(session['user_id']),))
+        results = cursor.fetchall()
         
-        q = data['question']
-        results, num = search.searchDocuments(q)
-        end = time.perf_counter()
+        # Get user's available days to determine the split
+        user = database.get_user(session['user_id'])
+        if not user or not user.get('avail_days'):
+            return jsonify({'error': 'Please set your available days in preferences'}), 400
         
-        time_taken = end - start
-
-        return jsonify({'time': (time_taken*1000),'message': results, 'numHits': num})
+        splitList = genPlan.daysplitter(user['avail_days'])
+        dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        
+        plan = {}
+        storedPlans = {row[0]: json.loads(row[1]) for row in results}
+        
+        for i, day in enumerate(splitList):
+            dayName = dayNames[i]
+            if day == 'rest':
+                plan[dayName] = []
+            else:
+                plan[dayName] = storedPlans.get(day, [])
+        
+        return jsonify({'success': True, 'plan': plan})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

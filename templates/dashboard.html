@@ -6,48 +6,88 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <style>
         body {
-            font-family: Arial;
-            background: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: 0;
             padding: 20px;
+            min-height: 100vh;
         }
         .header {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             padding: 20px;
             margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
         .card {
-            background: white;
-            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
             margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
         .info-card {
-            background: white;
+            background: rgba(255, 255, 255, 0.9);
             padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .info-card:hover {
+            transform: translateY(-2px);
         }
         .info-card h3 {
             color: #667eea;
-            font-size: 12px;
+            font-size: 14px;
             margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .info-card p {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
         }
         button {
-            padding: 10px 20px;
-            background: #667eea;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: #333;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: #333;
+        }
         }
         button:hover {
             background: #5568d3;
@@ -98,6 +138,46 @@
             margin: 10px 0;
             color: #666;
         }
+        .plan-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .plan-day {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            transition: transform 0.2s;
+        }
+        .plan-day:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .plan-day h3 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+            font-size: 18px;
+        }
+        .day-type {
+            font-weight: bold;
+            color: #764ba2;
+            margin-bottom: 15px;
+            padding: 5px 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .plan-day ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .plan-day li {
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
         #elapsed-time {
             text-align: center;
             color: #666;
@@ -136,6 +216,14 @@
                 <h3>Age</h3>
                 <p>{{ user.age or 'Not specified' }}</p>
             </div>
+            <div class="info-card">
+                <h3>Available Days</h3>
+                <p>{{ user.avail_days or 'Not specified' }}</p>
+            </div>
+            <div class="info-card">
+                <h3>Session Minutes</h3>
+                <p>{{ user.avail_mins or 'Not specified' }}</p>
+            </div>
         </div>
         
         <div class="card" style="text-align: center;">
@@ -143,7 +231,13 @@
         </div>
         
         <div class="card">
-            <h2>Search Exercises</h2>
+            <h2>Your Workout Plan</h2>
+            <div id="plan-container">
+                <p id="plan-status">Loading plan...</p>
+                <div id="plan-content" style="display: none;"></div>
+                <button id="generate-plan-btn" style="margin-top: 10px;">Generate New Plan</button>
+            </div>
+        </div>
             <div id="textbox">
                 <textarea id="text" placeholder="Search..."></textarea>
                 <span id="button">→</span>
@@ -154,6 +248,96 @@
     
     <script>
         let busy = 0;
+        
+        // Load plan on page load
+        window.addEventListener('load', loadPlan);
+        
+        async function loadPlan() {
+            try {
+                const res = await fetch('/get_plan');
+                const data = await res.json();
+                if (data.success) {
+                    displayPlan(data.plan);
+                } else {
+                    document.getElementById('plan-status').textContent = 'No plan generated yet. Click "Generate New Plan" to create one.';
+                }
+            } catch (err) {
+                document.getElementById('plan-status').textContent = 'Error loading plan.';
+            }
+        }
+        
+        async function displayPlan(plan) {
+            document.getElementById('plan-status').style.display = 'none';
+            document.getElementById('plan-content').style.display = 'block';
+            
+            // Collect all exercise IDs
+            const allIds = new Set();
+            Object.values(plan).forEach(exercises => {
+                exercises.forEach(id => allIds.add(id));
+            });
+            
+            // Get exercise names
+            let exerciseNames = {};
+            if (allIds.size > 0) {
+                const idsStr = Array.from(allIds).join(',');
+                try {
+                    const res = await fetch(`/get_exercises?ids=${idsStr}`);
+                    const data = await res.json();
+                    exerciseNames = data.exercises || {};
+                } catch (err) {
+                    console.error('Error fetching exercise names:', err);
+                }
+            }
+            
+            let html = '<div class="plan-grid">';
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            
+            for (let i = 0; i < 7; i++) {
+                const dayName = days[i];
+                const dayKey = Object.keys(plan)[i];
+                const exercises = plan[dayKey] || [];
+                
+                html += `<div class="plan-day">
+                    <h3>${dayName}</h3>
+                    <div class="day-type">${dayKey.charAt(0).toUpperCase() + dayKey.slice(1)}</div>`;
+                
+                if (exercises.length > 0) {
+                    html += '<ul>';
+                    exercises.forEach(exerciseId => {
+                        const name = exerciseNames[exerciseId] || `Exercise ${exerciseId}`;
+                        html += `<li>${name}</li>`;
+                    });
+                    html += '</ul>';
+                } else {
+                    html += '<p>Rest day</p>';
+                }
+                
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            document.getElementById('plan-content').innerHTML = html;
+        }
+        
+        document.getElementById('generate-plan-btn').addEventListener('click', async function() {
+            this.disabled = true;
+            this.textContent = 'Generating...';
+            
+            try {
+                const res = await fetch('/generate_plan', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    displayPlan(data.plan);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                alert('Error generating plan');
+            }
+            
+            this.disabled = false;
+            this.textContent = 'Generate New Plan';
+        });
         
         document.getElementById("button").onclick = send;
         document.getElementById("text").addEventListener('input', function() {

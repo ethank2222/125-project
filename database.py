@@ -27,6 +27,8 @@ def init_db():
             age INTEGER,
             gender TEXT,
             previous_injuries TEXT,
+            avail_days INTEGER,
+            avail_mins INTEGER,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     ''')
@@ -47,11 +49,12 @@ def create_user(username, password, name, preferences):
                       (username, pwd_hash, name))
         uid = cursor.lastrowid
         
-        cursor.execute('''INSERT INTO preferences (user_id, intent, weight, height, age, gender, previous_injuries)
-                         VALUES (?, ?, ?, ?, ?, ?, ?)''',
+        cursor.execute('''INSERT INTO preferences (user_id, intent, weight, height, age, gender, previous_injuries, avail_days, avail_mins)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                       (uid, preferences.get('intent'), preferences.get('weight'),
                        preferences.get('height'), preferences.get('age'),
-                       preferences.get('gender'), preferences.get('previous_injuries')))
+                       preferences.get('gender'), preferences.get('previous_injuries'),
+                       preferences.get('avail_days'), preferences.get('avail_mins')))
         
         conn.commit()
         return uid
@@ -73,7 +76,7 @@ def authenticate_user(username, password):
 def get_user(user_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('''SELECT u.id, u.username, u.name, p.intent, p.weight, p.height, p.age, p.gender, p.previous_injuries
+    cursor.execute('''SELECT u.id, u.username, u.name, p.intent, p.weight, p.height, p.age, p.gender, p.previous_injuries, p.avail_days, p.avail_mins
                       FROM users u LEFT JOIN preferences p ON u.id = p.user_id WHERE u.id = ?''', 
                   (user_id,))
     result = cursor.fetchone()
@@ -82,7 +85,7 @@ def get_user(user_id):
     if result:
         return {'id': result[0], 'username': result[1], 'name': result[2], 'intent': result[3],
                 'weight': result[4], 'height': result[5], 'age': result[6], 'gender': result[7],
-                'previous_injuries': result[8]}
+                'previous_injuries': result[8], 'avail_days': result[9], 'avail_mins': result[10]}
     return None
 
 def update_preferences(user_id, preferences):
@@ -92,16 +95,18 @@ def update_preferences(user_id, preferences):
     found = cursor.fetchone()
     
     if found:
-        cursor.execute('''UPDATE preferences SET intent = ?, weight = ?, height = ?, age = ?, gender = ?, previous_injuries = ?
+        cursor.execute('''UPDATE preferences SET intent = ?, weight = ?, height = ?, age = ?, gender = ?, previous_injuries = ?, avail_days = ?, avail_mins = ?
                          WHERE user_id = ?''',
                       (preferences.get('intent'), preferences.get('weight'), preferences.get('height'),
-                       preferences.get('age'), preferences.get('gender'), preferences.get('previous_injuries'), user_id))
+                       preferences.get('age'), preferences.get('gender'), preferences.get('previous_injuries'),
+                       preferences.get('avail_days'), preferences.get('avail_mins'), user_id))
     else:
-        cursor.execute('''INSERT INTO preferences (user_id, intent, weight, height, age, gender, previous_injuries)
-                         VALUES (?, ?, ?, ?, ?, ?, ?)''',
+        cursor.execute('''INSERT INTO preferences (user_id, intent, weight, height, age, gender, previous_injuries, avail_days, avail_mins)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                       (user_id, preferences.get('intent'), preferences.get('weight'),
                        preferences.get('height'), preferences.get('age'),
-                       preferences.get('gender'), preferences.get('previous_injuries')))
+                       preferences.get('gender'), preferences.get('previous_injuries'),
+                       preferences.get('avail_days'), preferences.get('avail_mins')))
     
     conn.commit()
     conn.close()

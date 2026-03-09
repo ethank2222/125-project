@@ -5,8 +5,8 @@
     <title>Create Account</title>
     <style>
         body {
-            font-family: Arial;
-            background: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -15,10 +15,13 @@
             padding: 20px;
         }
         .container {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             padding: 40px;
             width: 100%;
             max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
         h1 {
             text-align: center;
@@ -113,7 +116,7 @@
             <div class="progress-bar" id="progress"></div>
         </div>
         <div class="step-info">
-            <span id="step">1</span> of 7
+            <span id="step">1</span> of 8
         </div>
         <div id="error" class="error"></div>
         
@@ -190,6 +193,21 @@
             
             <div class="card" data-step="6">
                 <div class="form-group">
+                    <label>Available Days per Week</label>
+                    <input type="number" id="avail_days" min="1" max="7" required>
+                </div>
+                <div class="form-group">
+                    <label>Available Minutes per Session</label>
+                    <input type="number" id="avail_mins" min="10" max="180" required>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" onclick="nextStep()">Next</button>
+                </div>
+            </div>
+            
+            <div class="card" data-step="7">
+                <div class="form-group">
                     <label>Gender</label>
                     <select id="gender">
                         <option value="">Prefer not to say</option>
@@ -204,7 +222,7 @@
                 </div>
             </div>
             
-            <div class="card" data-step="7">
+            <div class="card" data-step="8">
                 <div class="form-group">
                     <label>Previous Injuries (optional)</label>
                     <textarea id="previous_injuries"></textarea>
@@ -225,7 +243,7 @@
         let step = 1;
         
         function updateProgress() {
-            document.getElementById('progress').style.width = (step / 7 * 100) + '%';
+            document.getElementById('progress').style.width = (step / 8 * 100) + '%';
             document.getElementById('step').textContent = step;
         }
         
@@ -257,7 +275,7 @@
         
         function nextStep() {
             if (!validate()) return;
-            if (step < 7) {
+            if (step < 8) {
                 step++;
                 showStep(step);
                 hideError();
@@ -295,7 +313,9 @@
                 height: document.getElementById('height').value ? parseFloat(document.getElementById('height').value) : null,
                 age: document.getElementById('age').value ? parseInt(document.getElementById('age').value) : null,
                 gender: document.getElementById('gender').value,
-                previous_injuries: document.getElementById('previous_injuries').value.trim()
+                previous_injuries: document.getElementById('previous_injuries').value.trim(),
+                avail_days: document.getElementById('avail_days').value ? parseInt(document.getElementById('avail_days').value) : null,
+                avail_mins: document.getElementById('avail_mins').value ? parseInt(document.getElementById('avail_mins').value) : null
             };
             
             try {

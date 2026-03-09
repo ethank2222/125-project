@@ -146,22 +146,26 @@ def dayExist(day)-> bool:
 
 
 def buildPlan(user):
-    fullPlan = [[]] 
+    fullPlan = {}
     splitList = daysplitter(user['avail_days'])
-    for day in splitList:
+    dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    
+    for i, day in enumerate(splitList):
+        dayName = dayNames[i]
         if day == 'rest':
+            fullPlan[dayName] = []
             continue
         
-        print(day)
-        cursor.execute("SELECT exercises FROM userSplits WHERE day = ?;", (day,))
-        if cursor.fetchone() is None:
+        cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['id']), day))
+        res = cursor.fetchone()
+        if res is None:
             dayPlan = buildDay(day, time=user['avail_mins'])
-            print(dayPlan)
+            # Store the plan for future use
+            cursor.execute("INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
+                          (str(user['id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
+            conn.commit()
         else:
-            res = cursor.fetchone()
-            dayPlan = json.loads(res[2])
-            print(dayPlan)
-
-
-# if __name__ == __main__:
-#     main()
+            dayPlan = json.loads(res[0])
+        fullPlan[dayName] = dayPlan
+    
+    return fullPlan
