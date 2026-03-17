@@ -28,12 +28,9 @@ def getMuscleGroups(day) -> list:
     match day:
         case 'push':  return PUSH
         case 'pull':  return PULL
-        case 'upper': return PUSH + PULL
-        case 'legs': return LEGS
-        case 'fullA': pass
-        case 'fullB': pass
-        case 'fullC': pass
-        case 'cardio': pass
+        case 'upper': return PUSH+PULL
+        case 'legs': return PUSH+PULL+LEGS+ABS
+        case 'cardio': return LEGS
         case 'rest': pass
 
     print(f"NOT a valid day: {day}")
@@ -65,9 +62,14 @@ def daysplitter(days):
         return "Not a valid number of days!"
     
 
-# TODO buildDay updates:
-# 1. Error handling: muscle groups that are not in compounds
-# 2. Isolation exercise round
+
+# special case
+def cardioDay(time):
+    # only leg muscles
+    # only when mechanic is NULL and force is NULL
+
+    # return list of exercise id's exactly as buildDay does.
+    return None
 def buildDay(day, time):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -75,6 +77,8 @@ def buildDay(day, time):
     musclesAll  = getMuscleGroups(day)
     musclesLeft = musclesAll.copy()
 
+    if(day=='cardio'):
+        return cardioDay(time)
     # First iteration
     # print(f"INITIAL Muscles: {musclesLeft}")
     while time > 15 and musclesLeft:
@@ -140,10 +144,8 @@ def buildDay(day, time):
         cursor.execute(selectQ, queryFill)
         res = cursor.fetchone()
         
-        if i_curr == tail:
-            i_curr = 0
-        else:
-            i_curr += 1
+        # circular buffer style
+        i_curr = (i_curr+1)%tail
         
         if res is None:
             # isolation of that exercise doesn't exist
@@ -220,3 +222,24 @@ def buildPlan(user):
     
     conn.close()
     return fullPlan
+
+
+def reroll_day(user): 
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['id']), day))
+    res = cursor.fetchone()
+    if res is None:
+        dayPlan = buildDay(day, time=user['avail_mins'])
+        # Store the plan for future use
+        cursor.execute("INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
+                        (str(user['id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
+        conn.commit()
+    else:
+        dayPlan = json.loads(res[0])
+    fullPlan[dayName] = dayPlan
+    conn.close()
+
+
+
