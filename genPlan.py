@@ -65,11 +65,104 @@ def daysplitter(days):
 
 # special case
 def cardioDay(time):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    exercises  = ['']
+    musclesAll  = getMuscleGroups('cardio')
+    musclesLeft = musclesAll.copy()
+    
     # only leg muscles
     # only when mechanic is NULL and force is NULL
+    print(f"IN CARDIODAY: TIME = {time}")
+    print(f"IN CARDIODAY: musclesLeft = {musclesLeft}")
+
+    while time > 15 and musclesLeft:
+        musclePQL  = ", ".join(["?"] * len(musclesLeft))
+        musclePQA  = ", ".join(["?"] * len(musclesAll))
+        skipIdPQ   = ", ".join(["?"] * len(exercises))
+        selectQ    = f"""
+        SELECT id, primaryMuscles, secondaryMuscles
+        FROM exercises
+        WHERE (
+            primaryMuscles in ({musclePQL})
+            OR EXISTS (
+                SELECT 1
+                FROM json_each(exercises.secondaryMuscles)
+                WHERE json_each.value in ({musclePQA})
+            )
+        )
+        AND mechanic IS NULL
+        AND force IS NULL
+        AND ID NOT IN ({skipIdPQ})
+        ORDER BY score DESC
+        LIMIT 1;
+        """
+        queryFill = (*musclesLeft, *musclesAll, *exercises)
+
+        cursor.execute(selectQ, queryFill)
+        res = cursor.fetchone()
+        
+        if res is None:
+            break  # No more exercises found
+        
+        time -= 15
+        exercises.append(res[0])
+        
+        # Remove primary muscle if it's in the list
+        primary = res[1]
+        if primary in musclesLeft:
+            musclesLeft.remove(primary)
+        
+        # Remove secondary muscles if they're in the list
+        secondaryMuscles = json.loads(res[2])
+        for e in secondaryMuscles:
+            if e in musclesLeft:
+                musclesLeft.remove(e)
+        # print(f"Remaining {musclesLeft}")
+    # Second iteration, focus on isolations
+    # print(exercises)
+    i_curr = 0
+    tail = len(musclesAll)
+    bad_queries = 0
+    while time > 9:
+        musclePQA  = ", ".join(["?"] * len(musclesAll))
+        skipIdPQ   = ", ".join(["?"] * len(exercises))
+        selectQ    = f"""
+        SELECT id, primaryMuscles, secondaryMuscles
+        FROM exercises
+        WHERE primaryMuscles = ?
+        AND mechanic IS NULL
+        AND force IS NULL
+        AND ID NOT IN ({skipIdPQ})
+        ORDER BY score DESC
+        LIMIT 1;
+        """
+        queryFill = (musclesAll[i_curr], *exercises)
+
+        cursor.execute(selectQ, queryFill)
+        res = cursor.fetchone()
+        
+        # circular buffer style
+        i_curr = (i_curr+1)%tail
+        
+        if res is None:
+            # isolation of that exercise doesn't exist
+            bad_queries += 1
+            if bad_queries == tail:
+                # hacky way of checking that we completely depleted all viable exercises
+                break
+
+        else:
+            time -= 10
+            exercises.append(res[0])
+
+    conn.close()
+    return exercises[1:]
+    
 
     # return list of exercise id's exactly as buildDay does.
-    return None
+
+
 def buildDay(day, time):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -204,14 +297,14 @@ def buildPlan(user):
             fullPlan[dayName] = []
             continue
         
-        cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['id']), day))
+        cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['user_id']), day))
         res = cursor.fetchone()
         if res is None:
             dayPlan = buildDay(day, time=user['avail_mins'])
             print(dayPlan)
             # Store the plan for future use
             cursor.execute("INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
-                          (str(user['id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
+                          (str(user['user_id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
             conn.commit()
         else:
             dayPlan = json.loads(res[0])
