@@ -124,6 +124,7 @@ def buildDay(day, time):
                 musclesLeft.remove(e)
         # print(f"Remaining {musclesLeft}")
     # Second iteration, focus on isolations
+    # print(exercises)
     i_curr = 0
     tail = len(musclesAll)
     bad_queries = 0
@@ -139,7 +140,7 @@ def buildDay(day, time):
         ORDER BY score DESC
         LIMIT 1;
         """
-        queryFill = (musclesAll[i_curr], *musclesAll, *exercises)
+        queryFill = (musclesAll[i_curr], *exercises)
 
         cursor.execute(selectQ, queryFill)
         res = cursor.fetchone()
@@ -190,11 +191,6 @@ def createUserSplitsTable():
         print("Failed to create tables:", e)
 
 
-def dayExist(day)-> bool:
-    cursor.execute("SELECT 1 FROM userSplits WHERE day  = ? LIMIT 1", (day,))
-    return cursor.fetchone() is not None
-
-
 def buildPlan(user):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -224,22 +220,22 @@ def buildPlan(user):
     return fullPlan
 
 
-def reroll_day(user): 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+# def reroll_day(user): 
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
 
-    cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['id']), day))
-    res = cursor.fetchone()
-    if res is None:
-        dayPlan = buildDay(day, time=user['avail_mins'])
-        # Store the plan for future use
-        cursor.execute("INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
-                        (str(user['id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
-        conn.commit()
-    else:
-        dayPlan = json.loads(res[0])
-    fullPlan[dayName] = dayPlan
-    conn.close()
+#     cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['id']), day))
+#     res = cursor.fetchone()
+#     if res is None:
+#         dayPlan = buildDay(day, time=user['avail_mins'])
+#         # Store the plan for future use
+#         cursor.execute("INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
+#                         (str(user['id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
+#         conn.commit()
+#     else:
+#         dayPlan = json.loads(res[0])
+#     fullPlan[dayName] = dayPlan
+#     conn.close()
 
 
 
