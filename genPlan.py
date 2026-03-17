@@ -65,11 +65,43 @@ def daysplitter(days):
 
 # special case
 def cardioDay(time):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    exercises  = ['']
+    musclesAll  = getMuscleGroups('cardio')
+    musclesLeft = musclesAll.copy()
+    
     # only leg muscles
     # only when mechanic is NULL and force is NULL
+    print(f"IN CARDIODAY: TIME = {time}")
+    print(f"IN CARDIODAY: musclesLeft = {musclesLeft}")
+
+    if time > 15 and musclesLeft:
+        selectQ = f"""
+        SELECT id
+        FROM exercises
+        WHERE mechanic IS NULL
+        AND force IS NULL
+        LIMIT ({time} / 15);
+        """
+
+        cursor.execute(selectQ)
+        res = cursor.fetchall()
+        print
+        print(f"IN CARDIODAY: RES IS {res}")
+        
+        if res is None:
+            print(f"IN CARDIODAY: NO EXERCISE FOUND")
+        
+        exercises = res
+    conn.close()
+    print(exercises)
+    return exercises
+    
 
     # return list of exercise id's exactly as buildDay does.
-    return None
+
+
 def buildDay(day, time):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -204,13 +236,13 @@ def buildPlan(user):
             fullPlan[dayName] = []
             continue
         
-        cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['id']), day))
+        cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['user_id']), day))
         res = cursor.fetchone()
         if res is None:
             dayPlan = buildDay(day, time=user['avail_mins'])
             # Store the plan for future use
             cursor.execute("INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
-                          (str(user['id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
+                          (str(user['user_id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
             conn.commit()
         else:
             dayPlan = json.loads(res[0])
