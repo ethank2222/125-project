@@ -208,6 +208,7 @@ def buildPlan(user):
         res = cursor.fetchone()
         if res is None:
             dayPlan = buildDay(day, time=user['avail_mins'])
+            print(dayPlan)
             # Store the plan for future use
             cursor.execute("INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
                           (str(user['id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
@@ -220,22 +221,27 @@ def buildPlan(user):
     return fullPlan
 
 
-# def reroll_day(user): 
-#     conn = get_db_connection()
-#     cursor = conn.cursor()
+def reroll_day(user, day): 
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-#     cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['id']), day))
-#     res = cursor.fetchone()
-#     if res is None:
-#         dayPlan = buildDay(day, time=user['avail_mins'])
-#         # Store the plan for future use
-#         cursor.execute("INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
-#                         (str(user['id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
-#         conn.commit()
-#     else:
-#         dayPlan = json.loads(res[0])
-#     fullPlan[dayName] = dayPlan
-#     conn.close()
+    cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['id']), day))
+    res = cursor.fetchone()
+    dayPlan = json.loads(res[0])
+    print(dayPlan)
+    # selectQ = f"""
+    #     SELECT id, primaryMuscles, secondaryMuscles
+    #     FROM exercises
+    #     WHERE primaryMuscles = ?
+    #     AND mechanic = 'isolation'
+    #     AND ID NOT IN ({skipIdPQ})
+    #     ORDER BY score DESC
+    #     LIMIT 1;
+    # """
+
+    # for 
+
+    conn.close()
 
 
 
