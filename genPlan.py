@@ -209,7 +209,7 @@ def buildDay(day, time):
 def createUserSplitsTable():
     e01_create_usersplits = f"""
     CREATE TABLE IF NOT EXISTS userSplits (
-        userid TEXT PRIMARY KEY,
+        user_id TEXT PRIMARY KEY,
         musclegroup TEXT,
         exercises TEXT
         );
@@ -264,27 +264,52 @@ def buildPlan(user):
     return fullPlan
 
 
-def reroll_day(user, day): 
+def reroll_day(user, day):
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['id']), day))
+ 
+    # Fetch current exercises and saved time for this day
+    select_exercises_q = """
+    SELECT exercises 
+    FROM userSplits
+    WHERE userid = ? AND day = ?;
+"""
+    cursor.execute(select_exercises_q, (str(user['user_id']), day))
     res = cursor.fetchone()
+ 
+    if res is None:
+        conn.close()
+        print(f"No existing plan found for user {user['user_id']} on day '{day}'")
+        return None
+ 
     dayPlan = json.loads(res[0])
-    print(dayPlan)
-    # selectQ = f"""
-    #     SELECT id, primaryMuscles, secondaryMuscles
-    #     FROM exercises
-    #     WHERE primaryMuscles = ?
-    #     AND mechanic = 'isolation'
-    #     AND ID NOT IN ({skipIdPQ})
-    #     ORDER BY score DESC
-    #     LIMIT 1;
-    # """
-
-    # for 
-
+    print(f"Rerolling '{day}' for user {user['user_id']}: {dayPlan}")
+ 
+    # Decrement score for each exercise in the current plan so they rank lower next time
+    if dayPlan:
+        pq_id = ", ".join(["?"] * len(dayPlan))
+        cursor.execute(f"""
+            UPDATE exercises
+            SET score = score - 4
+            WHERE id IN ({pq_id});
+        """, dayPlan)
+        conn.commit()
+ 
+    # Regenerate the day
+    avail_mins = user['avail_mins']
+    newDayPlan = buildDay(day, time=avail_mins)
+    # REROLLED PLAN CREATED HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    print(f"New plan for '{day}': {newDayPlan}")
+ 
+    # Update userSplits DB
+    cursor.execute("""
+        INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount)
+        VALUES (?, ?, ?, ?, ?);
+    """, (str(user['user_id']), day, json.dumps(newDayPlan), avail_mins, len(newDayPlan)))
+    conn.commit()
+ 
     conn.close()
+    return newDayPlan
 
 
 
