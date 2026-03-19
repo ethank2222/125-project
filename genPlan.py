@@ -139,10 +139,11 @@ def daysplitter(days):
 
 
 # special case
-def cardioDay(time):
+def cardioDay(time, exclude_ids=None):
     conn = get_db_connection()
     cursor = conn.cursor()
-    exercises  = ['']
+    exercises = []
+    skip_ids = [''] + (exclude_ids or [])
     musclesAll  = getMuscleGroups('cardio')
     musclesLeft = musclesAll.copy()
     
@@ -152,7 +153,7 @@ def cardioDay(time):
 
     while time > 14:
         musclePQA  = ", ".join(["?"] * len(musclesAll))
-        skipIdPQ   = ", ".join(["?"] * len(exercises))
+        skipIdPQ   = ", ".join(["?"] * len(skip_ids))
         selectQ    = f"""
         SELECT id, primaryMuscles, secondaryMuscles
         FROM exercises
@@ -170,7 +171,7 @@ def cardioDay(time):
         ORDER BY score DESC
         LIMIT 1;
         """
-        queryFill = (*musclesAll, *musclesAll, *exercises)
+        queryFill = (*musclesAll, *musclesAll, *skip_ids)
 
         cursor.execute(selectQ, queryFill)
         res = cursor.fetchone()
@@ -180,29 +181,31 @@ def cardioDay(time):
         
         time -= 15
         exercises.append(res[0])
+        skip_ids.append(res[0])
 
     conn.close()
-    return exercises[1:]
+    return exercises
     
 
     # return list of exercise id's exactly as buildDay does.
 
 
-def buildDay(day, time):
+def buildDay(day, time, exclude_ids=None):
     conn = get_db_connection()
     cursor = conn.cursor()
-    exercises  = ['']
+    exercises = []
+    skip_ids = [''] + (exclude_ids or [])
     musclesAll  = getMuscleGroups(day)
     musclesLeft = musclesAll.copy()
 
     if(day=='cardio'):
-        return cardioDay(time)
+        return cardioDay(time, exclude_ids=exclude_ids)
     # First iteration
     # print(f"INITIAL Muscles: {musclesLeft}")
     while time > 15 and musclesLeft:
         musclePQL  = ", ".join(["?"] * len(musclesLeft))
         musclePQA  = ", ".join(["?"] * len(musclesAll))
-        skipIdPQ   = ", ".join(["?"] * len(exercises))
+        skipIdPQ   = ", ".join(["?"] * len(skip_ids))
         selectQ    = f"""
         SELECT id, primaryMuscles, secondaryMuscles
         FROM exercises
@@ -219,7 +222,7 @@ def buildDay(day, time):
         ORDER BY score DESC
         LIMIT 1;
         """
-        queryFill = (*musclesLeft, *musclesAll, *exercises)
+        queryFill = (*musclesLeft, *musclesAll, *skip_ids)
 
         cursor.execute(selectQ, queryFill)
         res = cursor.fetchone()
@@ -229,6 +232,7 @@ def buildDay(day, time):
         
         time -= 15
         exercises.append(res[0])
+        skip_ids.append(res[0])
         
         # Remove primary muscle if it's in the list
         primary = res[1]
@@ -248,7 +252,7 @@ def buildDay(day, time):
     bad_queries = 0
     while time > 9:
         musclePQA  = ", ".join(["?"] * len(musclesAll))
-        skipIdPQ   = ", ".join(["?"] * len(exercises))
+        skipIdPQ   = ", ".join(["?"] * len(skip_ids))
         selectQ    = f"""
         SELECT id, primaryMuscles, secondaryMuscles
         FROM exercises
@@ -258,7 +262,7 @@ def buildDay(day, time):
         ORDER BY score DESC
         LIMIT 1;
         """
-        queryFill = (musclesAll[i_curr], *exercises)
+        queryFill = (musclesAll[i_curr], *skip_ids)
 
         cursor.execute(selectQ, queryFill)
         res = cursor.fetchone()
@@ -276,9 +280,10 @@ def buildDay(day, time):
         else:
             time -= 10
             exercises.append(res[0])
+            skip_ids.append(res[0])
 
     conn.close()
-    return exercises[1:]
+    return exercises
 
 
 def createUserSplitsTable():
@@ -344,7 +349,7 @@ def buildPlan(user, force_new=False):
                         WHERE id IN ({pq_id});
                     """, old_plan)
                     conn.commit()
-            dayPlan = buildDay(day, time=user['avail_mins'])
+            dayPlan = buildDay(day, time=user['avail_mins'], exclude_ids=old_plan if res is not None else None)
             print(dayPlan)
             cursor.execute(
                 "INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
@@ -412,9 +417,17 @@ def reroll_day(user, day):
  
     # Regenerate the day
     avail_mins = user['avail_mins']
-    newDayPlan = buildDay(day, time=avail_mins)
+    newDayPlan = buildDay(day, time=avail_mins, exclude_ids=dayPlan if dayPlan else None)
     # REROLLED PLAN CREATED HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     print(f"New plan for '{day}': {newDayPlan}")
+
+    # Update userSplits DB
+    cursor.execute("""
+        INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount)
+        VALUES (?, ?, ?, ?, ?);
+    """, (str(user_id), day, json.dumps(newDayPlan), avail_mins, len(newDayPlan)))
+    conn.commit()
+
     conn.close()
     return newDayPlan
 

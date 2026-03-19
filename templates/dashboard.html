@@ -127,6 +127,9 @@
         h3 {
             font-size: 16px;
         }
+        .plan-day h3 {
+            margin-bottom: 6px;
+        }
         .muted {
             color: var(--muted);
             font-size: 13px;
@@ -241,6 +244,7 @@
             font-weight: 600;
             letter-spacing: 0.08em;
             text-transform: uppercase;
+            margin-top: 6px;
         }
         .plan-day ul {
             list-style: none;
@@ -288,6 +292,12 @@
             border: 1px solid var(--stroke);
             background: rgba(12, 20, 34, 0.7);
             margin-bottom: 12px;
+            cursor: pointer;
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+        #results .result:hover {
+            border-color: rgba(46, 181, 168, 0.4);
+            transform: translateY(-2px);
         }
         #results a {
             color: var(--accent-2);
@@ -301,6 +311,83 @@
             color: var(--muted);
             font-size: 13px;
             margin: 0 0 12px;
+        }
+        .exercise-link {
+            background: none;
+            border: none;
+            color: var(--text);
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+            padding: 0;
+        }
+        .exercise-link:hover {
+            color: var(--accent);
+        }
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 12, 18, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            z-index: 50;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-card {
+            width: min(760px, 96vw);
+            max-height: 86vh;
+            overflow: auto;
+            background: var(--card-strong);
+            border: 1px solid var(--stroke);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .modal-title {
+            margin: 0;
+            font-size: 22px;
+        }
+        .modal-close {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text);
+            border-radius: 10px;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin: 18px 0;
+        }
+        .meta-item {
+            background: rgba(12, 21, 33, 0.7);
+            border: 1px solid var(--stroke);
+            border-radius: 12px;
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+        .meta-item span {
+            display: block;
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .instruction-list {
+            margin: 8px 0 0;
+            padding-left: 18px;
         }
         @keyframes floatIn {
             from {
@@ -408,12 +495,33 @@
         </main>
     </div>
 
+    <div id="exercise-modal" class="modal" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title" id="modal-title">Exercise</h2>
+                    <div class="muted" id="modal-subtitle"></div>
+                </div>
+                <button class="modal-close" id="modal-close">Close</button>
+            </div>
+            <div class="meta-grid" id="modal-meta"></div>
+            <div>
+                <h3>Instructions</h3>
+                <ol class="instruction-list" id="modal-instructions"></ol>
+            </div>
+        </div>
+    </div>
+
     <script>
         let busy = 0;
         let currentPlan = null;
         const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
         window.addEventListener('load', loadPlan);
+
+        function formatName(name) {
+            return String(name || '').replace(/_/g, ' ');
+        }
 
         async function loadPlan() {
             try {
@@ -476,7 +584,7 @@
                     html += '<ul>';
                     exercises.forEach(exerciseId => {
                         const name = exerciseNames[exerciseId] || `Exercise ${exerciseId}`;
-                        html += `<li>${name}</li>`;
+                        html += `<li><button class="exercise-link" data-exercise-id="${exerciseId}">${formatName(name)}</button></li>`;
                     });
                     html += '</ul>';
                 } else {
@@ -578,14 +686,19 @@
                 timeEl.textContent = `Found ${res.numHits} results in ${res.time.toFixed(3)}ms`;
                 document.getElementById('results').appendChild(timeEl);
 
-                for (let i = 0; i < Object.keys(res.message).length; i++) {
-                    const item = Object.values(res.message)[i];
-                    if (item.url !== '#') {
-                        const div = document.createElement('div');
-                        div.className = 'result';
-                        div.innerHTML = `<a href="${item.url}">${item.title}</a><div style="font-size: 12px; color: #9bb0c8;">${item.url}</div><p>${item.desc}</p>`;
-                        document.getElementById('results').appendChild(div);
+                const items = Array.isArray(res.message) ? res.message : Object.values(res.message || {});
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    const div = document.createElement('div');
+                    div.className = 'result';
+                    const title = formatName(item.title);
+                    const desc = item.desc ? formatName(item.desc) : '';
+                    const exId = item.id || '';
+                    if (exId) {
+                        div.setAttribute('data-exercise-id', exId);
                     }
+                    div.innerHTML = `<strong>${title}</strong><div style="font-size: 12px; color: #9bb0c8;">Exercise</div><p>${desc}</p>`;
+                    document.getElementById('results').appendChild(div);
                 }
 
                 if (document.getElementsByClassName('result').length === 0) {
@@ -597,6 +710,77 @@
 
             busy = 0;
         }
+
+        const modal = document.getElementById('exercise-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalSubtitle = document.getElementById('modal-subtitle');
+        const modalMeta = document.getElementById('modal-meta');
+        const modalInstructions = document.getElementById('modal-instructions');
+
+        async function openExerciseModal(exerciseId) {
+            if (!exerciseId) return;
+            try {
+                const res = await fetch(`/exercise_detail?id=${encodeURIComponent(exerciseId)}`);
+                const data = await res.json();
+                if (!data.success) {
+                    alert(data.error || 'Unable to load exercise');
+                    return;
+                }
+                const ex = data.exercise;
+                modalTitle.textContent = formatName(ex.name || exerciseId);
+                modalSubtitle.textContent = formatName(ex.force || '');
+
+                const metaItems = [];
+                if (ex.level) metaItems.push({ label: 'Level', value: ex.level });
+                if (ex.equipment) metaItems.push({ label: 'Equipment', value: ex.equipment });
+                if (ex.mechanic) metaItems.push({ label: 'Mechanic', value: ex.mechanic });
+                if (ex.category) metaItems.push({ label: 'Category', value: ex.category });
+                if (ex.primaryMuscles && ex.primaryMuscles.length) metaItems.push({ label: 'Primary', value: ex.primaryMuscles.join(', ') });
+                if (ex.secondaryMuscles && ex.secondaryMuscles.length) metaItems.push({ label: 'Secondary', value: ex.secondaryMuscles.join(', ') });
+
+                modalMeta.innerHTML = metaItems.map(item => `
+                    <div class="meta-item">
+                        <span>${formatName(item.label)}</span>
+                        ${formatName(item.value)}
+                    </div>
+                `).join('');
+
+                modalInstructions.innerHTML = '';
+                (ex.instructions || []).forEach(step => {
+                    const li = document.createElement('li');
+                    li.textContent = formatName(step);
+                    modalInstructions.appendChild(li);
+                });
+
+                modal.classList.add('show');
+                modal.setAttribute('aria-hidden', 'false');
+            } catch (err) {
+                alert('Unable to load exercise');
+            }
+        }
+
+        function closeExerciseModal() {
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        document.addEventListener('click', function(event) {
+            const trigger = event.target.closest('[data-exercise-id]');
+            if (trigger) {
+                openExerciseModal(trigger.getAttribute('data-exercise-id'));
+                return;
+            }
+            if (event.target === modal) {
+                closeExerciseModal();
+            }
+        });
+
+        document.getElementById('modal-close').addEventListener('click', closeExerciseModal);
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeExerciseModal();
+            }
+        });
     </script>
 </body>
 </html>

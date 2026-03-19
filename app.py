@@ -128,19 +128,10 @@ def get_exercises():
         return jsonify({'error': 'Need exercise IDs'}), 400
     
     try:
-        import genPlan
-        ids = [int(id.strip()) for id in exercise_ids.split(',') if id.strip()]
+        ids = [id.strip() for id in exercise_ids.split(',') if id.strip()]
         if not ids:
             return jsonify({'exercises': {}})
-        
-        placeholders = ', '.join(['?'] * len(ids))
-        query = f"SELECT id, name FROM exercises WHERE id IN ({placeholders})"
-        with sqlite3.connect(genPlan.DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, ids)
-            results = cursor.fetchall()
-        
-        exercises = {row[0]: row[1] for row in results}
+        exercises = search.get_exercise_name_map(ids)
         return jsonify({'exercises': exercises})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -181,6 +172,40 @@ def get_plan():
         return jsonify({'success': True, 'plan': plan})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/askQuestion', methods=['POST'])
+def ask_question():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Need to login'}), 401
+
+    data = request.get_json() or {}
+    question = (data.get('question') or '').strip()
+    if not question:
+        return jsonify({'message': [], 'numHits': 0, 'time': 0.0})
+
+    start = time.time()
+    try:
+        results, total = search.searchDocuments(question)
+        elapsed_ms = (time.time() - start) * 1000.0
+        return jsonify({'message': results, 'numHits': total, 'time': elapsed_ms})
+    except Exception as e:
+        return jsonify({'error': str(e), 'message': [], 'numHits': 0, 'time': 0.0}), 500
+
+
+@app.route('/exercise_detail')
+def exercise_detail():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Need to login'}), 401
+
+    ex_id = (request.args.get('id') or '').strip()
+    if not ex_id:
+        return jsonify({'error': 'Missing exercise id'}), 400
+
+    exercise = search.get_exercise_by_id(ex_id)
+    if not exercise:
+        return jsonify({'error': 'Exercise not found'}), 404
+
+    return jsonify({'success': True, 'exercise': exercise})
 
 @app.route('/generate_plan', methods=['POST'])
 def generate_plan():

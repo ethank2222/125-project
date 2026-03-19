@@ -1,11 +1,52 @@
 import sqlite3
 import json
+import os
+import re
 
 DB_PATH = "./db/FIT.db"
+RAW_EXERCISES_PATH = os.path.join(os.path.dirname(__file__), "raw_data", "exercises.json")
+_EXERCISES_CACHE = None
+
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     return conn
+
+
+def _normalize_exercise_id(name: str) -> str:
+    if not name:
+        return ""
+    cleaned = name.replace("'", "").replace("’", "")
+    return re.sub(r"[^A-Za-z0-9_-]+", "_", cleaned).strip("_")
+
+
+def load_exercises():
+    global _EXERCISES_CACHE
+    if _EXERCISES_CACHE is not None:
+        return _EXERCISES_CACHE
+    with open(RAW_EXERCISES_PATH, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    for ex in data:
+        ex["id"] = _normalize_exercise_id(ex.get("name", ""))
+    _EXERCISES_CACHE = data
+    return data
+
+
+def get_exercise_by_id(exercise_id: str):
+    if not exercise_id:
+        return None
+    data = load_exercises()
+    for ex in data:
+        if ex.get("id") == exercise_id:
+            return ex
+    return None
+
+
+def get_exercise_name_map(exercise_ids):
+    data = load_exercises()
+    index = {ex.get("id"): ex.get("name") for ex in data}
+    return {ex_id: index.get(ex_id, ex_id) for ex_id in exercise_ids}
+
 
 # HAVE TO UPDATE DB
 # front and middle shoulder for push
@@ -17,24 +58,49 @@ PULL = ['biceps', 'shoulders', 'lower back', 'middle back', 'traps', 'lats']
 ABS = ['abdominals', 'adductors', 'abductors']
 LEGS = ['hamstrings', 'quadriceps', 'calves', 'glutes']
 
+
 def searchDocuments(query):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    # Placeholder implementation
-    results = {
-        0: {
-            'url': '#',
-            'title': 'No results found',
-            'desc': f'Your query: {query}'
-        },
-        1: {
-            'url': '#',
-            'title': 'No results found',
-            'desc': f'Your query: {query}'
-        }
-    }
-    conn.close()
-    return (results, 2)
+    q = (query or "").strip().lower()
+    if not q:
+        return ([], 0)
+
+    data = load_exercises()
+    results = []
+
+    for ex in data:
+        name = ex.get("name") or ""
+        primary = ", ".join(ex.get("primaryMuscles") or [])
+        secondary = ", ".join(ex.get("secondaryMuscles") or [])
+        equipment = ex.get("equipment") or ""
+        level = ex.get("level") or ""
+        category = ex.get("category") or ""
+        mechanic = ex.get("mechanic") or ""
+
+        haystack = " ".join([name, primary, secondary, equipment, level, category, mechanic]).lower()
+        if q in haystack:
+            parts = []
+            if primary:
+                parts.append(f"Primary: {primary}")
+            if secondary:
+                parts.append(f"Secondary: {secondary}")
+            if equipment:
+                parts.append(f"Equipment: {equipment}")
+            if level:
+                parts.append(f"Level: {level}")
+            if category:
+                parts.append(f"Category: {category}")
+            if mechanic:
+                parts.append(f"Mechanic: {mechanic}")
+            desc = " | ".join(parts) if parts else "Exercise details"
+            results.append({
+                "id": ex.get("id"),
+                "url": "#",
+                "title": name or f"Exercise {ex.get('id')}",
+                "desc": desc
+            })
+
+    results = results[:30]
+    return (results, len(results))
 
 
 def initScoring(user_data: dict): 
@@ -185,6 +251,3 @@ def createUserSplitsTable():
             print("Tables created successfully.")
     except sqlite3.OperationalError as e:
         print("Failed to create tables:", e)
-
-
-
