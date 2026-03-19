@@ -3,104 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <title>Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg: #0f1724;
+            --bg-2: #111c2b;
+            --card: rgba(16, 27, 41, 0.88);
+            --card-strong: rgba(19, 33, 50, 0.96);
+            --text: #e6eef7;
+            --muted: #92a7bd;
+            --accent: #2eb5a8;
+            --accent-2: #1f8a84;
+            --stroke: rgba(255, 255, 255, 0.08);
+            --shadow: 0 20px 60px rgba(3, 10, 25, 0.35);
+        }
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            margin: 0;
             min-height: 100vh;
+            font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(1200px 800px at 15% -10%, rgba(46, 181, 168, 0.18), transparent 60%),
+                radial-gradient(900px 700px at 110% 10%, rgba(31, 138, 132, 0.22), transparent 55%),
+                linear-gradient(160deg, #0f1724 0%, #142131 45%, #0f1a25 100%);
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+        .auth-shell {
+            width: min(420px, 100%);
+            z-index: 1;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .logo {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-family: "Space Grotesk", sans-serif;
+            font-weight: 700;
+            color: #0b1220;
+            background: linear-gradient(135deg, var(--accent) 0%, #53d0c3 100%);
+            box-shadow: 0 10px 22px rgba(46, 181, 168, 0.22);
+        }
+        .brand-title {
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 22px;
             margin: 0;
         }
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            width: 100%;
-            max-width: 400px;
+        .brand-sub {
+            font-size: 12px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--stroke);
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(14px);
         }
         h1 {
-            text-align: center;
-            margin-bottom: 30px;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 20px;
+            margin: 0 0 8px;
+        }
+        .muted {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 24px;
         }
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
         label {
             display: block;
-            margin-bottom: 5px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 6px;
+            color: var(--muted);
         }
         input {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(12, 21, 34, 0.75);
+            color: var(--text);
+            outline: none;
+        }
+        input:focus {
+            border-color: rgba(46, 181, 168, 0.5);
+            box-shadow: 0 0 0 2px rgba(46, 181, 168, 0.2);
         }
         .error {
-            background: #fee;
-            color: #c33;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            background: rgba(255, 107, 107, 0.15);
+            color: #ffb4b4;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 107, 107, 0.2);
+            margin-bottom: 16px;
             display: none;
         }
         .error.show {
             display: block;
         }
-        button {
+        .btn {
             width: 100%;
-            padding: 12px;
-            background: #667eea;
-            color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 12px;
+            padding: 12px 18px;
+            font-weight: 600;
+            font-size: 14px;
             cursor: pointer;
-            font-size: 16px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
-        button:hover {
-            background: #5568d3;
+        .btn.primary {
+            color: #0b1220;
+            background: linear-gradient(135deg, var(--accent) 0%, #5ad8cc 100%);
+            box-shadow: 0 6px 14px rgba(46, 181, 168, 0.16);
+        }
+        .btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(46, 181, 168, 0.22);
         }
         .divider {
             text-align: center;
-            margin: 20px 0;
-            color: #999;
+            margin: 18px 0;
+            color: var(--muted);
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
         }
-        .btn-secondary {
-            background: white;
-            color: #667eea;
-            border: 1px solid #667eea;
-            margin-top: 10px;
+        .btn.secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
-        .btn-secondary:hover {
-            background: #f5f5f5;
+        .btn.secondary:hover {
+            transform: translateY(-2px);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>E3 Exercise Search</h1>
-        <div id="error" class="error"></div>
-        
-        <form method="POST" action="/login">
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" required>
+    <div class="auth-shell">
+        <div class="brand">
+            <div class="logo">E3</div>
+            <div>
+                <div class="brand-sub">E3 Training Console</div>
+                <h1 class="brand-title">Welcome back</h1>
             </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="password" required>
-            </div>
-            <button type="submit">Login</button>
-        </form>
-        
-        <div class="divider">or</div>
-        <button class="btn-secondary" onclick="window.location.href='/signup'">Sign Up</button>
+        </div>
+
+        <div class="card">
+            <h1>Sign in</h1>
+            <div class="muted">Access your personalized training plan.</div>
+            <div id="error" class="error"></div>
+
+            <form method="POST" action="/login">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" required>
+                </div>
+                <button type="submit" class="btn primary">Login</button>
+            </form>
+
+            <div class="divider">or</div>
+            <button class="btn secondary" onclick="window.location.href='/signup'">Create an account</button>
+        </div>
     </div>
-    
+
     <script>
         if ('{{ error }}') {
             document.getElementById('error').textContent = '{{ error }}';

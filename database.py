@@ -3,6 +3,16 @@ import hashlib
 
 DB_PATH = 'users.db'
 
+def ensure_preferences_schema(conn):
+    cursor = conn.cursor()
+    cursor.execute('PRAGMA table_info(preferences)')
+    cols = {row[1] for row in cursor.fetchall()}
+    if 'avail_days' not in cols:
+        cursor.execute('ALTER TABLE preferences ADD COLUMN avail_days INTEGER')
+    if 'avail_mins' not in cols:
+        cursor.execute('ALTER TABLE preferences ADD COLUMN avail_mins INTEGER')
+    conn.commit()
+
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -32,6 +42,7 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     ''')
+    ensure_preferences_schema(conn)
     
     conn.commit()
     conn.close()
@@ -42,6 +53,7 @@ def hash_password(password):
 def create_user(username, password, name, preferences):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    ensure_preferences_schema(conn)
     
     try:
         pwd_hash = hash_password(password)
@@ -66,6 +78,7 @@ def create_user(username, password, name, preferences):
 def authenticate_user(username, password):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    ensure_preferences_schema(conn)
     password_hash = hash_password(password)
     cursor.execute('SELECT id FROM users WHERE username = ? AND password_hash = ?', 
                   (username, password_hash))
@@ -76,6 +89,7 @@ def authenticate_user(username, password):
 def get_user(user_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    ensure_preferences_schema(conn)
     cursor.execute('''SELECT u.id, u.username, u.name, p.intent, p.weight, p.height, p.age, p.gender, p.previous_injuries, p.avail_days, p.avail_mins
                       FROM users u LEFT JOIN preferences p ON u.id = p.user_id WHERE u.id = ?''', 
                   (user_id,))
@@ -91,6 +105,7 @@ def get_user(user_id):
 def update_preferences(user_id, preferences):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    ensure_preferences_schema(conn)
     cursor.execute('SELECT id FROM preferences WHERE user_id = ?', (user_id,))
     found = cursor.fetchone()
     
@@ -114,6 +129,7 @@ def update_preferences(user_id, preferences):
 def username_exists(username):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    ensure_preferences_schema(conn)
     cursor.execute('SELECT id FROM users WHERE username = ?', (username,))
     result = cursor.fetchone()
     conn.close()

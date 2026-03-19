@@ -2,10 +2,85 @@ import sqlite3
 import json
 
 DB_PATH = "./db/FIT.db"
+DAY_NAMES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     return conn
+
+
+def resolve_user_id(user):
+    if isinstance(user, dict):
+        if user.get('user_id') is not None:
+            return user.get('user_id')
+        if user.get('id') is not None:
+            return user.get('id')
+    return user
+
+
+def ensure_usersplits_schema(conn=None):
+    close_after = False
+    if conn is None:
+        conn = get_db_connection()
+        close_after = True
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='userSplits';")
+    if cursor.fetchone() is None:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS userSplits (
+                userid TEXT,
+                day TEXT,
+                exercises TEXT,
+                time INTEGER CHECK (time > 0),
+                exerciseCount INTEGER CHECK (exerciseCount > 0),
+                PRIMARY KEY (userid, day)
+            );
+        """)
+        conn.commit()
+        if close_after:
+            conn.close()
+        return
+
+    cursor.execute("PRAGMA table_info(userSplits);")
+    columns = cursor.fetchall()
+    pk_map = {col[1]: col[5] for col in columns}
+    day_pk = pk_map.get('day', 0)
+    user_pk = pk_map.get('userid', 0)
+
+    if day_pk == 0 or user_pk == 0:
+        col_names = {col[1] for col in columns}
+        day_col = 'day' if 'day' in col_names else ('musclegroup' if 'musclegroup' in col_names else None)
+        exercises_col = 'exercises' if 'exercises' in col_names else None
+        time_col = 'time' if 'time' in col_names else None
+        count_col = 'exerciseCount' if 'exerciseCount' in col_names else None
+
+        cursor.execute("ALTER TABLE userSplits RENAME TO userSplits_old;")
+        cursor.execute("""
+            CREATE TABLE userSplits (
+                userid TEXT,
+                day TEXT,
+                exercises TEXT,
+                time INTEGER CHECK (time > 0),
+                exerciseCount INTEGER CHECK (exerciseCount > 0),
+                PRIMARY KEY (userid, day)
+            );
+        """)
+        cursor.execute(f"""
+            INSERT INTO userSplits (userid, day, exercises, time, exerciseCount)
+            SELECT
+                userid,
+                {day_col if day_col else "NULL"},
+                {exercises_col if exercises_col else "NULL"},
+                {time_col if time_col else "NULL"},
+                {count_col if count_col else "NULL"}
+            FROM userSplits_old;
+        """)
+        cursor.execute("DROP TABLE userSplits_old;")
+        conn.commit()
+
+    if close_after:
+        conn.close()
 
 # TODO DB updates:
 # 1. bin shoulders into shoulders interior, shoulders exterior (pull and push)
@@ -209,9 +284,12 @@ def buildDay(day, time):
 def createUserSplitsTable():
     e01_create_usersplits = f"""
     CREATE TABLE IF NOT EXISTS userSplits (
-        user_id TEXT PRIMARY KEY,
-        musclegroup TEXT,
-        exercises TEXT
+        userid TEXT,
+        day TEXT,
+        exercises TEXT,
+        time INTEGER CHECK (time > 0),
+        exerciseCount INTEGER CHECK (exerciseCount > 0),
+        PRIMARY KEY (userid, day)
         );
 """
     print(DB_PATH)
@@ -234,30 +312,55 @@ def createUserSplitsTable():
         print("Failed to create tables:", e)
 
 
-def buildPlan(user):
+def buildPlan(user, force_new=False):
     conn = get_db_connection()
     cursor = conn.cursor()
+    ensure_usersplits_schema(conn)
     fullPlan = {}
+    user_id = resolve_user_id(user)
+    if user_id is None:
+        conn.close()
+        raise ValueError("Missing user id for plan generation.")
     splitList = daysplitter(user['avail_days'])
-    dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    dayNames = DAY_NAMES
     
     for i, day in enumerate(splitList):
         dayName = dayNames[i]
         if day == 'rest':
             fullPlan[dayName] = []
             continue
-        
-        cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user['user_id']), day))
+
+        cursor.execute("SELECT exercises FROM userSplits WHERE userid = ? AND day = ?;", (str(user_id), day))
         res = cursor.fetchone()
-        if res is None:
+
+        if force_new:
+            if res is not None:
+                old_plan = json.loads(res[0])
+                if old_plan:
+                    pq_id = ", ".join(["?"] * len(old_plan))
+                    cursor.execute(f"""
+                        UPDATE exercises
+                        SET score = score - 4
+                        WHERE id IN ({pq_id});
+                    """, old_plan)
+                    conn.commit()
             dayPlan = buildDay(day, time=user['avail_mins'])
             print(dayPlan)
-            # Store the plan for future use
-            cursor.execute("INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
-                          (str(user['user_id']), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
+            cursor.execute(
+                "INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
+                (str(user_id), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan))
+            )
             conn.commit()
         else:
-            dayPlan = json.loads(res[0])
+            if res is None:
+                dayPlan = buildDay(day, time=user['avail_mins'])
+                print(dayPlan)
+                # Store the plan for future use
+                cursor.execute("INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount) VALUES (?, ?, ?, ?, ?);",
+                              (str(user_id), day, json.dumps(dayPlan), user['avail_mins'], len(dayPlan)))
+                conn.commit()
+            else:
+                dayPlan = json.loads(res[0])
         fullPlan[dayName] = dayPlan
     
     conn.close()
@@ -267,6 +370,19 @@ def buildPlan(user):
 def reroll_day(user, day):
     conn = get_db_connection()
     cursor = conn.cursor()
+    ensure_usersplits_schema(conn)
+    user_id = resolve_user_id(user)
+    if user_id is None:
+        conn.close()
+        raise ValueError("Missing user id for reroll.")
+
+    splitList = daysplitter(user['avail_days'])
+    if day in DAY_NAMES and isinstance(splitList, list):
+        day_idx = DAY_NAMES.index(day)
+        day = splitList[day_idx]
+    if day == 'rest':
+        conn.close()
+        return []
  
     # Fetch current exercises and saved time for this day
     select_exercises_q = """
@@ -274,16 +390,15 @@ def reroll_day(user, day):
     FROM userSplits
     WHERE userid = ? AND day = ?;
 """
-    cursor.execute(select_exercises_q, (str(user['user_id']), day))
+    cursor.execute(select_exercises_q, (str(user_id), day))
     res = cursor.fetchone()
  
     if res is None:
-        conn.close()
-        print(f"No existing plan found for user {user['user_id']} on day '{day}'")
-        return None
- 
-    dayPlan = json.loads(res[0])
-    print(f"Rerolling '{day}' for user {user['user_id']}: {dayPlan}")
+        print(f"No existing plan found for user {user_id} on day '{day}'")
+        dayPlan = []
+    else:
+        dayPlan = json.loads(res[0])
+    print(f"Rerolling '{day}' for user {user_id}: {dayPlan}")
  
     # Decrement score for each exercise in the current plan so they rank lower next time
     if dayPlan:
@@ -300,14 +415,6 @@ def reroll_day(user, day):
     newDayPlan = buildDay(day, time=avail_mins)
     # REROLLED PLAN CREATED HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     print(f"New plan for '{day}': {newDayPlan}")
- 
-    # Update userSplits DB
-    cursor.execute("""
-        INSERT OR REPLACE INTO userSplits (userid, day, exercises, time, exerciseCount)
-        VALUES (?, ?, ?, ?, ?);
-    """, (str(user['user_id']), day, json.dumps(newDayPlan), avail_mins, len(newDayPlan)))
-    conn.commit()
- 
     conn.close()
     return newDayPlan
 

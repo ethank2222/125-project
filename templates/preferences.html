@@ -2,166 +2,297 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Preferences</title>
+    <title>Edit Preferences</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg: #0f1724;
+            --bg-2: #111c2b;
+            --card: rgba(16, 27, 41, 0.88);
+            --card-strong: rgba(19, 33, 50, 0.96);
+            --text: #e6eef7;
+            --muted: #92a7bd;
+            --accent: #2eb5a8;
+            --accent-2: #1f8a84;
+            --danger: #ff6b6b;
+            --stroke: rgba(255, 255, 255, 0.08);
+            --shadow: 0 20px 60px rgba(3, 10, 25, 0.35);
+        }
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: 0;
-            padding: 20px;
             min-height: 100vh;
+            font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(1200px 800px at 15% -10%, rgba(46, 181, 168, 0.18), transparent 60%),
+                radial-gradient(900px 700px at 110% 10%, rgba(31, 138, 132, 0.22), transparent 55%),
+                linear-gradient(160deg, #0f1724 0%, #142131 45%, #0f1a25 100%);
         }
-        .container {
-            max-width: 600px;
+        .app {
+            position: relative;
+            max-width: 900px;
             margin: 0 auto;
+            padding: 32px 24px 60px;
         }
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 12px;
+        .topbar {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
+            justify-content: space-between;
+            padding: 18px 22px;
+            background: rgba(12, 21, 34, 0.75);
+            border: 1px solid var(--stroke);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            font-family: "Space Grotesk", sans-serif;
+            font-weight: 700;
+            color: #0b1220;
+            background: linear-gradient(135deg, var(--accent) 0%, #53d0c3 100%);
+            box-shadow: 0 10px 22px rgba(46, 181, 168, 0.22);
+        }
+        .brand-title {
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .brand-sub {
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .user-chip {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--stroke);
+            color: var(--muted);
+            font-size: 13px;
         }
         .card {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
+            margin-top: 24px;
+            background: var(--card);
+            border: 1px solid var(--stroke);
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
+        }
+        h1 {
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 22px;
+            margin: 0 0 6px;
+        }
+        .muted {
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            margin-top: 20px;
         }
         .form-group {
-            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
         label {
-            display: block;
-            margin-bottom: 5px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
         }
         input, select, textarea {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(12, 21, 34, 0.75);
+            color: var(--text);
+            outline: none;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: rgba(46, 181, 168, 0.5);
+            box-shadow: 0 0 0 2px rgba(46, 181, 168, 0.2);
         }
         textarea {
-            min-height: 80px;
-        }
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        button {
-            flex: 1;
-            padding: 12px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #5568d3;
-        }
-        .btn-secondary {
-            background: white;
-            color: #667eea;
-            border: 1px solid #667eea;
-        }
-        .btn-secondary:hover {
-            background: #f5f5f5;
+            min-height: 90px;
+            resize: vertical;
+            grid-column: 1 / -1;
         }
         .message {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-top: 16px;
             display: none;
-        }
-        .success {
-            background: #efe;
-            color: #3c3;
-        }
-        .error {
-            background: #fee;
-            color: #c33;
         }
         .message.show {
             display: block;
         }
+        .success {
+            background: rgba(46, 181, 168, 0.12);
+            color: #9fe5dc;
+            border: 1px solid rgba(46, 181, 168, 0.2);
+        }
+        .error {
+            background: rgba(255, 107, 107, 0.12);
+            color: #ffb4b4;
+            border: 1px solid rgba(255, 107, 107, 0.2);
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 22px;
+        }
+        .btn {
+            flex: 1;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 18px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        .btn.primary {
+            color: #0b1220;
+            background: linear-gradient(135deg, var(--accent) 0%, #5ad8cc 100%);
+            box-shadow: 0 6px 14px rgba(46, 181, 168, 0.16);
+        }
+        .btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(46, 181, 168, 0.22);
+        }
+        .btn.secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .btn.secondary:hover {
+            transform: translateY(-2px);
+        }
+        @media (max-width: 700px) {
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 14px;
+            }
+            .top-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
+    <div class="app">
+        <header class="topbar">
+            <div class="brand">
+                <div class="logo">E3</div>
+                <div>
+                    <div class="brand-title">E3 Training Console</div>
+                    <div class="brand-sub">Profile tuning</div>
+                </div>
+            </div>
+            <div class="top-actions">
+                <div class="user-chip">{{ user.name }}</div>
+                <button class="btn secondary" onclick="window.location.href='/dashboard'">Back</button>
+            </div>
+        </header>
+
+        <section class="card">
             <h1>Edit Preferences</h1>
-            <a href="/dashboard"><button class="btn-secondary">Back</button></a>
-        </div>
-        
-        <div class="card">
+            <div class="muted">Keep your training plan aligned with your current schedule and goals.</div>
             <div id="success" class="message success"></div>
             <div id="error" class="message error"></div>
-            
+
             <form id="preferences-form">
-                <div class="form-group">
-                    <label>Fitness Goal</label>
-                    <select id="intent">
-                        <option value="">Select...</option>
-                        <option value="lose weight">Lose Weight</option>
-                        <option value="gain muscle">Gain Muscle</option>
-                        <option value="maintain fitness">Maintain Fitness</option>
-                        <option value="improve endurance">Improve Endurance</option>
-                        <option value="rehabilitation">Rehabilitation</option>
-                        <option value="general health">General Health</option>
-                    </select>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Fitness Goal</label>
+                        <select id="intent">
+                            <option value="">Select...</option>
+                            <option value="lose weight">Lose Weight</option>
+                            <option value="gain muscle">Gain Muscle</option>
+                            <option value="maintain fitness">Maintain Fitness</option>
+                            <option value="improve endurance">Improve Endurance</option>
+                            <option value="rehabilitation">Rehabilitation</option>
+                            <option value="general health">General Health</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Weight (lbs)</label>
+                        <input type="number" id="weight" step="0.1" value="{{ user.weight or '' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Height (inches)</label>
+                        <input type="number" id="height" step="0.1" value="{{ user.height or '' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Age</label>
+                        <input type="number" id="age" min="1" max="120" value="{{ user.age or '' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select id="gender">
+                            <option value="">Prefer not to say</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Available Days per Week</label>
+                        <input type="number" id="avail_days" min="1" max="7" value="{{ user.avail_days or '' }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Available Minutes per Session</label>
+                        <input type="number" id="avail_mins" min="10" max="180" value="{{ user.avail_mins or '' }}">
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Previous Injuries (optional)</label>
+                        <textarea id="previous_injuries">{{ user.previous_injuries or '' }}</textarea>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label>Weight (lbs)</label>
-                    <input type="number" id="weight" step="0.1" value="{{ user.weight or '' }}">
-                </div>
-                
-                <div class="form-group">
-                    <label>Height (inches)</label>
-                    <input type="number" id="height" step="0.1" value="{{ user.height or '' }}">
-                </div>
-                
-                <div class="form-group">
-                    <label>Age</label>
-                    <input type="number" id="age" min="1" max="120" value="{{ user.age or '' }}">
-                </div>
-                
-                <div class="form-group">
-                    <label>Gender</label>
-                    <select id="gender">
-                        <option value="">Prefer not to say</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Available Days per Week</label>
-                    <input type="number" id="avail_days" min="1" max="7" value="{{ user.avail_days or '' }}">
-                </div>
-                
-                <div class="form-group">
-                    <label>Available Minutes per Session</label>
-                    <input type="number" id="avail_mins" min="10" max="180" value="{{ user.avail_mins or '' }}">
-                </div>
-                
+
                 <div class="btn-group">
-                    <button type="button" class="btn-secondary" onclick="window.location.href='/dashboard'">Cancel</button>
-                    <button type="submit">Save</button>
+                    <button type="button" class="btn secondary" onclick="window.location.href='/dashboard'">Cancel</button>
+                    <button type="submit" class="btn primary">Save</button>
                 </div>
             </form>
-        </div>
+        </section>
     </div>
-    
+
     <script>
         if ('{{ user.intent }}') {
             document.getElementById('intent').value = '{{ user.intent }}';
@@ -169,11 +300,12 @@
         if ('{{ user.gender }}') {
             document.getElementById('gender').value = '{{ user.gender }}';
         }
-        
+
         document.getElementById('preferences-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             document.getElementById('error').classList.remove('show');
-            
+            document.getElementById('success').classList.remove('show');
+
             const data = {
                 intent: document.getElementById('intent').value,
                 weight: document.getElementById('weight').value ? parseFloat(document.getElementById('weight').value) : null,
@@ -184,7 +316,7 @@
                 avail_days: document.getElementById('avail_days').value ? parseInt(document.getElementById('avail_days').value) : null,
                 avail_mins: document.getElementById('avail_mins').value ? parseInt(document.getElementById('avail_mins').value) : null
             };
-            
+
             try {
                 const res = await fetch('/update_preferences', {
                     method: 'POST',

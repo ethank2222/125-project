@@ -3,6 +3,7 @@ from flask import Flask, render_template, jsonify, request, session, redirect, u
 import time
 import os
 import json
+import sqlite3
 import database
 
 app = Flask(__name__)
@@ -134,8 +135,10 @@ def get_exercises():
         
         placeholders = ', '.join(['?'] * len(ids))
         query = f"SELECT id, name FROM exercises WHERE id IN ({placeholders})"
-        genPlan.cursor.execute(query, ids)
-        results = genPlan.cursor.fetchall()
+        with sqlite3.connect(genPlan.DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, ids)
+            results = cursor.fetchall()
         
         exercises = {row[0]: row[1] for row in results}
         return jsonify({'exercises': exercises})
@@ -149,10 +152,11 @@ def get_plan():
     
     try:
         import genPlan
-        conn = genPlan.conn
-        cursor = genPlan.cursor
-        cursor.execute("SELECT day, exercises FROM userSplits WHERE userid = ?;", (str(session['user_id']),))
-        results = cursor.fetchall()
+        with sqlite3.connect(genPlan.DB_PATH) as conn:
+            genPlan.ensure_usersplits_schema(conn)
+            cursor = conn.cursor()
+            cursor.execute("SELECT day, exercises FROM userSplits WHERE userid = ?;", (str(session['user_id']),))
+            results = cursor.fetchall()
         
         # Get user's available days to determine the split
         user = database.get_user(session['user_id'])
@@ -160,7 +164,7 @@ def get_plan():
             return jsonify({'error': 'Please set your available days in preferences'}), 400
         
         splitList = genPlan.daysplitter(user['avail_days'])
-        dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        dayNames = genPlan.DAY_NAMES
         
         plan = {}
         storedPlans = {row[0]: json.loads(row[1]) for row in results}
@@ -168,10 +172,12 @@ def get_plan():
         for i, day in enumerate(splitList):
             dayName = dayNames[i]
             if day == 'rest':
-                plan[dayName] = []
+                plan[dayName] = {'type': day, 'exercises': []}
             else:
-                plan[dayName] = storedPlans.get(day, [])
+                plan[dayName] = {'type': day, 'exercises': storedPlans.get(day, [])}
         
+        if not results:
+            return jsonify({'success': False, 'plan': plan})
         return jsonify({'success': True, 'plan': plan})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -187,8 +193,38 @@ def generate_plan():
     
     try:
         import genPlan
-        plan = genPlan.buildPlan(user)
-        return jsonify({'success': True, 'plan': plan})
+        plan = genPlan.buildPlan(user, force_new=True)
+        splitList = genPlan.daysplitter(user['avail_days'])
+        dayNames = genPlan.DAY_NAMES
+        formatted = {}
+        for i, dayName in enumerate(dayNames):
+            dayType = splitList[i]
+            formatted[dayName] = {
+                'type': dayType,
+                'exercises': plan.get(dayName, [])
+            }
+        return jsonify({'success': True, 'plan': formatted})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/reroll_day', methods=['POST'])
+def reroll_day():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Need to login'}), 401
+
+    data = request.get_json() or {}
+    day = data.get('day')
+    if not day:
+        return jsonify({'error': 'Missing day'}), 400
+
+    user = database.get_user(session['user_id'])
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    try:
+        import genPlan
+        new_day_plan = genPlan.reroll_day(user, day)
+        return jsonify({'success': True, 'day': day, 'exercises': new_day_plan})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
